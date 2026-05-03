@@ -1,4 +1,5 @@
 import json
+import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -32,13 +33,17 @@ async def query_project(project_id: int, body: QueryRequest, db: Session = Depen
     df = load_parquet(project_id)
     registry = json.loads(datamap.question_registry)
 
-    result = await run_query(
-        question=body.question,
-        df=df,
-        registry=registry,
-        weight_variable=datamap.weight_variable,
-        wave_variable=dataset.wave_variable,
-    )
+    try:
+        result = await run_query(
+            question=body.question,
+            df=df,
+            registry=registry,
+            weight_variable=datamap.weight_variable,
+            wave_variable=dataset.wave_variable,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
     history = ChatHistory(
         user_id=body.user_id,

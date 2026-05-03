@@ -1,10 +1,14 @@
 import anthropic
+import asyncio
 import json
+import os
 import pandas as pd
 from typing import Optional
+from dotenv import load_dotenv
 from services.stats_engine import get_frequency, get_trend, get_top_box, get_mean
 
-client = anthropic.Anthropic()
+load_dotenv()
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 TOOLS = [
     {
@@ -157,7 +161,8 @@ async def run_query(
     chart_data = None
 
     while True:
-        response = client.messages.create(
+        response = await asyncio.to_thread(
+            client.messages.create,
             model="claude-sonnet-4-6",
             max_tokens=2048,
             system=system,

@@ -5,7 +5,7 @@ from db import Base
 
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "DataLens_users"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False)
@@ -17,7 +17,7 @@ class User(Base):
 
 
 class Project(Base):
-    __tablename__ = "projects"
+    __tablename__ = "DataLens_projects"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(500), nullable=False)
@@ -30,10 +30,10 @@ class Project(Base):
 
 
 class Dataset(Base):
-    __tablename__ = "datasets"
+    __tablename__ = "DataLens_datasets"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("DataLens_projects.id"), nullable=False)
     spss_path = Column(String(1000), nullable=False)
     parquet_path = Column(String(1000), nullable=False)
     wave_variable = Column(String(200), nullable=True)
@@ -43,22 +43,22 @@ class Dataset(Base):
 
 
 class Datamap(Base):
-    __tablename__ = "datamaps"
+    __tablename__ = "DataLens_datamaps"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    question_registry = Column(Text, nullable=False)  # JSON stored as NVARCHAR(MAX) in SQL Server
+    project_id = Column(Integer, ForeignKey("DataLens_projects.id"), nullable=False)
+    question_registry = Column(Text, nullable=False)
     weight_variable = Column(String(200), nullable=True)
 
     project = relationship("Project", back_populates="datamaps")
 
 
 class AccessGrant(Base):
-    __tablename__ = "access_grants"
+    __tablename__ = "DataLens_access_grants"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("DataLens_users.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("DataLens_projects.id"), nullable=False)
     granted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     expires_at = Column(DateTime, nullable=False)
     revoked = Column(Boolean, default=False)
@@ -68,11 +68,11 @@ class AccessGrant(Base):
 
 
 class ChatHistory(Base):
-    __tablename__ = "chat_history"
+    __tablename__ = "DataLens_chat_history"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # nullable until Phase B auth
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("DataLens_users.id"), nullable=True)
+    project_id = Column(Integer, ForeignKey("DataLens_projects.id"), nullable=False)
     question = Column(Text, nullable=False)
     response = Column(Text, nullable=False)
     chart_json = Column(Text, nullable=True)
