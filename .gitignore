@@ -1,0 +1,26 @@
+# Environment variables (contains API keys and DB credentials — never commit)
+backend/.env
+
+# Virtual environment
+backend/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Survey data files (sensitive client data — never commit)
+data/spss/*.sav
+data/spss/*.xlsx
+data/spss/*.txt
+data/parquet/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
