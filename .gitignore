@@ -17,6 +17,10 @@ data/spss/*.xlsx
 data/spss/*.txt
 data/parquet/
 
+# Log files
+*.log
+backend/uvicorn_*.log
+
 # OS files
 .DS_Store
 Thumbs.db
