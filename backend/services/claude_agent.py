@@ -69,9 +69,11 @@ TOOLS = [
     {
         "name": "get_top_box",
         "description": (
-            "Get the top box / top N box score for a single-code scale question. "
-            "Use for satisfaction, recommendation, or rating questions when the user asks "
-            "about positive/top scores (e.g. 'top 2 box', '% who rate 4 or 5 out of 5')."
+            "Get a box score for any values on a single-code scale question — supports both top and bottom box. "
+            "Use top_values=[4,5] and box_label='Top 2 Box' for top box on a 5-point scale. "
+            "Use top_values=[1,2] and box_label='Bottom 2 Box' for bottom box. "
+            "Use top_values=[9,10] and box_label='NPS Promoters' for NPS. "
+            "For multi-question summaries, call this tool once per question and compile results into a comparison table."
         ),
         "input_schema": {
             "type": "object",
@@ -81,9 +83,13 @@ TOOLS = [
                     "type": "array",
                     "items": {"type": "number"},
                     "description": (
-                        "The numeric coded values that constitute the top box. "
-                        "E.g. [4, 5] for top 2 box on a 5-point scale, [9, 10] for NPS promoters."
+                        "The numeric coded values that constitute the box score. "
+                        "E.g. [4, 5] for top 2 box on a 5-point scale, [1, 2] for bottom 2 box, [9, 10] for NPS promoters."
                     ),
+                },
+                "box_label": {
+                    "type": "string",
+                    "description": "Label for this box score, e.g. 'Top 2 Box', 'Bottom 2 Box', 'Top 3 Box'. Defaults to 'Top Box'.",
                 },
                 "filters": {"type": "object"},
                 "weighted": {"type": "boolean"},
@@ -119,7 +125,7 @@ def _build_system_prompt(registry: dict, weight_variable: Optional[str], wave_va
                 "label": v["label"],
                 "type": v["type"],
                 "variables": v["variables"],
-                "options": list(v["option_labels"].values()) if v["option_labels"] else [],
+                "options": v["option_labels"] if v["option_labels"] else {},
             }
             for k, v in registry.items()
         },
@@ -142,7 +148,9 @@ Rules:
 5. For multi-response questions, mention that % may sum to more than 100%.
 6. Choose the right tool: get_frequency for distributions, get_trend for wave comparisons, get_top_box for positive score summaries, get_mean for averages.
 7. Recommend an appropriate chart type at the end of your response: bar chart (distributions), line chart (trends), or pie chart (simple proportions).
-8. Be concise: lead with the key insight, then the supporting numbers."""
+8. Dual base: Every response must report total_n (all respondents satisfying the filter) and answered_n (those who actually answered this question). When they differ, the question was routed — lead with % of answered respondents (n=answered_n), then note the total base (N=total_n). When equal, report one base only.
+9. Box scores: The options dict for each question maps SPSS numeric code → label (e.g. {"1": "Strongly Disagree", "5": "Strongly Agree"}). Use the numeric codes as top_values when calling get_top_box — never guess. Use the box_label from the tool result as your response heading. For multi-question comparisons, call get_top_box once per question and compile into a comparison table.
+10. Be concise: lead with the key insight, then the supporting numbers."""
 
 
 async def run_query(
@@ -221,10 +229,17 @@ def _execute_tool(
 def _build_chart_data(tool_name: str, result: dict) -> Optional[dict]:
     if tool_name == "get_frequency" and "results" in result:
         entries = list(result["results"].values())
+        total_n = result.get("total_n", result["base_n"])
+        answered_n = result.get("answered_n", result["base_n"])
+        base_label = (
+            f"Total: N={total_n} | Answered: n={answered_n}"
+            if total_n != answered_n
+            else f"Base: N={total_n}{' (weighted)' if result.get('weighted') else ''}"
+        )
         return {
             "type": "bar",
             "question_label": result.get("question_label", ""),
-            "base_label": f"Base: {result['base_n']} (weighted: {result['weighted_base']})" if result.get("weighted") else f"Base: {result['base_n']}",
+            "base_label": base_label,
             "labels": [e["label"] for e in entries],
             "datasets": [{"label": "% Respondents", "data": [e["pct"] for e in entries]}],
         }
@@ -250,19 +265,34 @@ def _build_chart_data(tool_name: str, result: dict) -> Optional[dict]:
         }
 
     elif tool_name == "get_top_box":
+        total_n = result.get("total_n", result.get("base_n"))
+        answered_n = result.get("answered_n", result.get("base_n"))
+        base_label = (
+            f"Total: N={total_n} | Answered: n={answered_n}"
+            if total_n != answered_n
+            else f"Base: N={answered_n}"
+        )
+        box_label = result.get("box_label", f"Top box ({result.get('top_values')})")
         return {
             "type": "bar",
             "question_label": result.get("question_label", ""),
-            "base_label": f"Base: {result.get('base_n')}",
-            "labels": [f"Top box ({result.get('top_values')})"],
-            "datasets": [{"label": "% Top Box", "data": [result.get("pct", 0)]}],
+            "base_label": base_label,
+            "labels": [box_label],
+            "datasets": [{"label": box_label, "data": [result.get("pct", 0)]}],
         }
 
     elif tool_name == "get_mean":
+        total_n = result.get("total_n", result.get("base_n"))
+        answered_n = result.get("answered_n", result.get("base_n"))
+        base_label = (
+            f"Total: N={total_n} | Answered: n={answered_n}"
+            if total_n != answered_n
+            else f"Base: N={answered_n}"
+        )
         return {
             "type": "bar",
             "question_label": result.get("question_label", ""),
-            "base_label": f"Base: {result.get('base_n')}",
+            "base_label": base_label,
             "labels": ["Mean Score"],
             "datasets": [{"label": "Mean", "data": [result.get("mean", 0)]}],
         }

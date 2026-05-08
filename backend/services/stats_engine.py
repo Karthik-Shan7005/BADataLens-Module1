@@ -67,8 +67,10 @@ def get_frequency(
         return {"error": f"Question '{question_code}' not found in registry"}
 
     weight_col = weight_variable if (weighted and weight_variable and weight_variable in df.columns) else None
-    base_n = len(df)
-    w_base = _weighted_base(df, weight_col)
+    total_n = len(df)
+    w_total_base = _weighted_base(df, weight_col)
+    answered_n = total_n
+    w_base = w_total_base
 
     results = {}
 
@@ -77,17 +79,19 @@ def get_frequency(
         if var not in df.columns:
             return {"error": f"Variable '{var}' not found in dataset"}
 
-        col = df[var].dropna()
-        unique_vals = col.unique()
+        answered_df = df[df[var].notna()]
+        answered_n = len(answered_df)
+        w_base = _weighted_base(answered_df, weight_col)
+        unique_vals = answered_df[var].unique()
 
         for val in sorted(unique_vals):
-            mask = df[var] == val
+            mask = answered_df[var] == val
             # Normalise the value key: SPSS stores as float (1.0), map to "1"
             val_key = str(int(val)) if isinstance(val, float) and val == int(val) else str(val)
             label = q["option_labels"].get(val_key, str(val))
 
             if weight_col:
-                n = float(df.loc[mask, weight_col].sum())
+                n = float(answered_df.loc[mask, weight_col].sum())
             else:
                 n = float(mask.sum())
 
@@ -120,7 +124,9 @@ def get_frequency(
         "question_label": q["label"],
         "question_type": q["type"],
         "results": results,
-        "base_n": base_n,
+        "total_n": total_n,
+        "answered_n": answered_n,
+        "base_n": answered_n,
         "weighted_base": round(w_base, 1),
         "weighted": bool(weight_col),
     }
@@ -166,13 +172,14 @@ def get_top_box(
     registry: dict,
     question_code: str,
     top_values: list,
+    box_label: str = "Top Box",
     filters: Optional[dict] = None,
     weighted: bool = True,
     weight_variable: Optional[str] = None,
     wave: Optional[str] = None,
     wave_variable: Optional[str] = None,
 ) -> dict:
-    """Top box score: % of respondents who chose one of the top_values."""
+    """Box score: % of answered respondents who chose one of the specified values. Supports top and bottom box."""
     if filters:
         df = apply_filters(df, filters, registry)
     if wave and wave_variable and wave_variable in df.columns:
@@ -187,23 +194,29 @@ def get_top_box(
         return {"error": f"Variable '{var}' not found in dataset"}
 
     weight_col = weight_variable if (weighted and weight_variable and weight_variable in df.columns) else None
-    base_n = len(df)
-    w_base = _weighted_base(df, weight_col)
+    total_n = len(df)
 
-    mask = df[var].isin(top_values)
+    answered_df = df[df[var].notna()]
+    answered_n = len(answered_df)
+    w_answered_base = _weighted_base(answered_df, weight_col)
+
+    mask = answered_df[var].isin(top_values)
     if weight_col:
-        n = float(df.loc[mask, weight_col].sum())
+        n = float(answered_df.loc[mask, weight_col].sum())
     else:
         n = float(mask.sum())
 
     return {
         "question_code": question_code,
         "question_label": q["label"],
+        "box_label": box_label,
         "top_values": top_values,
-        "pct": round(n / w_base * 100, 1) if w_base > 0 else 0.0,
+        "pct": round(n / w_answered_base * 100, 1) if w_answered_base > 0 else 0.0,
         "n": round(n, 1),
-        "base_n": base_n,
-        "weighted_base": round(w_base, 1),
+        "total_n": total_n,
+        "answered_n": answered_n,
+        "base_n": answered_n,
+        "weighted_base": round(w_answered_base, 1),
         "weighted": bool(weight_col),
     }
 
@@ -233,6 +246,7 @@ def get_mean(
         return {"error": f"Variable '{var}' not found in dataset"}
 
     weight_col = weight_variable if (weighted and weight_variable and weight_variable in df.columns) else None
+    total_n = len(df)
     valid = df[var].notna()
     base_n = int(valid.sum())
 
@@ -250,6 +264,8 @@ def get_mean(
         "question_code": question_code,
         "question_label": q["label"],
         "mean": round(mean_val, 2),
+        "total_n": total_n,
+        "answered_n": base_n,
         "base_n": base_n,
         "weighted_base": round(w_base, 1),
         "weighted": bool(weight_col),

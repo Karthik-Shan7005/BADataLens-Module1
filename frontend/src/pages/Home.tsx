@@ -28,11 +28,17 @@ export default function Home() {
   return (
     <div className="home-layout">
       <header className="app-header">
-        <div className="header-logo">
-          <span className="logo-dot">◉</span>
-          <span className="logo-text">DataLens</span>
+        <div className="header-left">
+          <img src="/BA%20Logo%20_1.png" alt="Borderless Access" className="header-company-logo" />
+          <div className="header-logo">
+            <span className="logo-dot">◉</span>
+            <span className="logo-text">DataLens</span>
+          </div>
         </div>
-        <span className="header-subtitle">AI Survey Insights Platform</span>
+        <div className="header-right">
+          <span className="header-subtitle">AI Survey Insights Platform</span>
+          <span className="header-powered">Powered by Borderless Access</span>
+        </div>
       </header>
 
       <main className="home-main">

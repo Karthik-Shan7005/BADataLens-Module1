@@ -99,8 +99,11 @@ export default function ProjectView() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <span className="logo-dot">◉</span>
-          <span className="logo-text">DataLens</span>
+          <img src="/BA%20Logo%20_1.png" alt="Borderless Access" className="sidebar-company-logo" />
+          <div className="sidebar-brand">
+            <span className="logo-dot">◉</span>
+            <span className="logo-text">DataLens</span>
+          </div>
         </div>
 
         <div className="sidebar-section">
@@ -144,6 +147,10 @@ export default function ProjectView() {
             )}
           </div>
         )}
+
+        <div className="sidebar-footer">
+          <span className="powered-by">Powered by Borderless Access</span>
+        </div>
       </aside>
 
       {/* Main content */}
