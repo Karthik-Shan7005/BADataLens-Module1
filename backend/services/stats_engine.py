@@ -74,7 +74,7 @@ def get_frequency(
 
     results = {}
 
-    if q["type"] == "single":
+    if q["type"] in ("single", "scale"):
         var = q["variables"][0]
         if var not in df.columns:
             return {"error": f"Variable '{var}' not found in dataset"}
@@ -186,8 +186,8 @@ def get_top_box(
         df = df[df[wave_variable].astype(str) == str(wave)]
 
     q = registry.get(question_code)
-    if not q or q["type"] != "single":
-        return {"error": f"Top box only supported for single-code questions. '{question_code}' is type '{q['type'] if q else 'unknown'}'."}
+    if not q or q["type"] not in ("single", "scale"):
+        return {"error": f"Top box only supported for single-code or scale questions. '{question_code}' is type '{q['type'] if q else 'unknown'}'."}
 
     var = q["variables"][0]
     if var not in df.columns:

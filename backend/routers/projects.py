@@ -51,16 +51,20 @@ async def create_project(
         db.rollback()
         raise HTTPException(status_code=422, detail=str(e))
 
-    # Enrich registry with SPSS value labels as fallback for any question
-    # that has no answer_option rows in the datamap
+    # Enrich registry with SPSS value labels.
+    # single/scale questions always use SPSS code-based labels (correct code→name mapping).
+    # multi questions only fill from SPSS when datamap provided no option_labels.
     spss_value_labels = spss_meta.get("value_labels", {})
     for q in registry.values():
         for var in q["variables"]:
-            if var in spss_value_labels and not q["option_labels"]:
-                q["option_labels"] = {
+            if var in spss_value_labels:
+                spss_code_labels = {
                     str(int(code)) if isinstance(code, float) and code == int(code) else str(code): label
                     for code, label in spss_value_labels[var].items()
                 }
+                if spss_code_labels:
+                    if q["type"] in ("single", "scale") or not q["option_labels"]:
+                        q["option_labels"] = spss_code_labels
 
     dataset = Dataset(
         project_id=project.id,

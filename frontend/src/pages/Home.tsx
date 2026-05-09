@@ -29,7 +29,7 @@ export default function Home() {
     <div className="home-layout">
       <header className="app-header">
         <div className="header-left">
-          <img src="/BA%20Logo%20_1.png" alt="Borderless Access" className="header-company-logo" />
+          <img src="/BA_Logo_white_text.png" alt="Borderless Access" className="header-company-logo" />
           <div className="header-logo">
             <span className="logo-dot">◉</span>
             <span className="logo-text">DataLens</span>

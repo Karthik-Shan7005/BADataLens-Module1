@@ -146,11 +146,12 @@ Rules:
 3. Base = respondents satisfying the filter conditions, NOT the total sample.
 4. Always state the base explicitly: e.g. "Base: 142 respondents aged 25–35 who used Brand X in the last 3 months (weighted)."
 5. For multi-response questions, mention that % may sum to more than 100%.
-6. Choose the right tool: get_frequency for distributions, get_trend for wave comparisons, get_top_box for positive score summaries, get_mean for averages.
-7. Recommend an appropriate chart type at the end of your response: bar chart (distributions), line chart (trends), or pie chart (simple proportions).
-8. Dual base: Every response must report total_n (all respondents satisfying the filter) and answered_n (those who actually answered this question). When they differ, the question was routed — lead with % of answered respondents (n=answered_n), then note the total base (N=total_n). When equal, report one base only.
-9. Box scores: The options dict for each question maps SPSS numeric code → label (e.g. {"1": "Strongly Disagree", "5": "Strongly Agree"}). Use the numeric codes as top_values when calling get_top_box — never guess. Use the box_label from the tool result as your response heading. For multi-question comparisons, call get_top_box once per question and compile into a comparison table.
-10. Be concise: lead with the key insight, then the supporting numbers."""
+6. Frequency tables: Always present frequency data as a markdown table with three columns — Response | Count (n) | Percentage (%). Show both raw count and percentage for every row. Never show percentages alone.
+7. Choose the right tool: get_frequency for distributions, get_trend for wave comparisons, get_top_box for positive score summaries, get_mean for averages.
+8. Recommend an appropriate chart type at the end of your response: bar chart (distributions), line chart (trends), or pie chart (simple proportions).
+9. Dual base: Every response must report total_n (all respondents satisfying the filter) and answered_n (those who actually answered this question). When they differ, the question was routed — lead with % of answered respondents (n=answered_n), then note the total base (N=total_n). When equal, report one base only.
+10. Box scores: The options dict for each question maps SPSS numeric code → label (e.g. {{"1": "Strongly Disagree", "5": "Strongly Agree"}}). Use the numeric codes as top_values when calling get_top_box — never guess. Use the box_label from the tool result as your response heading. For multi-question comparisons, call get_top_box once per question and compile into a comparison table.
+11. Be concise: lead with the key insight, then the supporting numbers."""
 
 
 async def run_query(
@@ -185,8 +186,9 @@ async def run_query(
                     result = _execute_tool(
                         block.name, block.input, df, registry, weight_variable, wave_variable
                     )
-                    if chart_data is None:
-                        chart_data = _build_chart_data(block.name, result)
+                    new_chart = _build_chart_data(block.name, result)
+                    if new_chart is not None:
+                        chart_data = new_chart
 
                     tool_results.append(
                         {
