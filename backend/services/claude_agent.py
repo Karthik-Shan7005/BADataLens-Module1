@@ -14,33 +14,41 @@ TOOLS = [
     {
         "name": "get_frequency",
         "description": (
-            "Get frequency/percentage breakdown of a survey question, optionally filtered and weighted. "
-            "Use when the question asks about distribution, percentages, or how many/what % of people "
-            "gave a particular response. For single-code questions this shows % per answer option. "
-            "For multi-response questions it shows % who selected each option (can sum to >100%)."
+            "Get the weighted frequency/percentage breakdown of a survey question. "
+            "Use for any question about distribution, percentages, or how respondents answered — "
+            "e.g. 'what % chose X', 'show me the breakdown of Q5', 'how many said yes'. "
+            "For single-code questions returns % per answer option. "
+            "For multi-response questions returns % who selected each option (totals may exceed 100%). "
+            "IMPORTANT — the 'n' values in results are WEIGHTED counts (effective n), not raw headcounts. "
+            "The tool also returns total_n (raw respondents after filters), answered_n (raw respondents "
+            "who answered this question), and weighted_base (sum of weights for answering respondents — "
+            "the denominator used to compute all percentages)."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "question_code": {
                     "type": "string",
-                    "description": "The question_id from the Question Registry",
+                    "description": "The question_id from the Question Registry. Must match exactly.",
                 },
                 "filters": {
                     "type": "object",
                     "description": (
                         "Optional filters as {question_id_or_variable: values}. "
                         "Values can be a list of codes (equality) or [min, max] for numeric ranges. "
-                        "Example: {\"Q_AGE\": [25, 35], \"Q_USAGE\": [3]} means age 25-35 AND usage=3."
+                        "Example: {\"Q_AGE\": [25, 35], \"Q_GENDER\": [1]} means age 25-35 AND gender=1."
                     ),
                 },
                 "weighted": {
                     "type": "boolean",
-                    "description": "Apply rim weights. Defaults to true when a weight variable exists.",
+                    "description": (
+                        "Apply rim weights. Always set true when a weight variable exists. "
+                        "Only set false when explicitly comparing weighted vs unweighted results."
+                    ),
                 },
                 "wave": {
                     "type": "string",
-                    "description": "Optional: filter to a specific wave value (e.g. '1', 'Wave 1 2024').",
+                    "description": "Filter to a single wave value (e.g. '1', 'Wave 1 2024'). Use get_trend instead for wave-over-wave comparisons.",
                 },
             },
             "required": ["question_code"],
@@ -49,9 +57,10 @@ TOOLS = [
     {
         "name": "get_trend",
         "description": (
-            "Get wave-over-wave trend data for a question. Use when the question asks about "
-            "changes over time, trends, or wave-by-wave comparisons. Returns the metric computed "
-            "for each wave in the dataset."
+            "Get wave-over-wave trend data for a question across all waves in the dataset. "
+            "Use when the question asks about change over time, tracking, or wave comparisons — "
+            "e.g. 'how has awareness changed', 'show trend for Q3', 'wave by wave breakdown'. "
+            "Returns one frequency result per wave so you can compare how responses shifted."
         ),
         "input_schema": {
             "type": "object",
@@ -59,7 +68,7 @@ TOOLS = [
                 "question_code": {"type": "string"},
                 "filters": {
                     "type": "object",
-                    "description": "Optional demographic or behavioural filters.",
+                    "description": "Optional demographic or behavioural filters applied consistently across all waves.",
                 },
                 "weighted": {"type": "boolean"},
             },
@@ -69,11 +78,13 @@ TOOLS = [
     {
         "name": "get_top_box",
         "description": (
-            "Get a box score for any values on a single-code scale question — supports both top and bottom box. "
-            "Use top_values=[4,5] and box_label='Top 2 Box' for top box on a 5-point scale. "
-            "Use top_values=[1,2] and box_label='Bottom 2 Box' for bottom box. "
-            "Use top_values=[9,10] and box_label='NPS Promoters' for NPS. "
-            "For multi-question summaries, call this tool once per question and compile results into a comparison table."
+            "Get a summary box score (% choosing specific values) for a single-code scale question. "
+            "Use for satisfaction, agreement, likelihood, NPS, or any rated scale where a summary "
+            "score matters more than the full distribution — e.g. 'top 2 box satisfaction', "
+            "'% highly likely', 'bottom box', 'NPS promoters'. "
+            "For multi-question comparisons, call once per question and compile into one table. "
+            "ALWAYS look up the numeric codes in the question's options dict before calling — "
+            "top_values must be the actual SPSS numeric codes, not labels."
         ),
         "input_schema": {
             "type": "object",
@@ -83,13 +94,14 @@ TOOLS = [
                     "type": "array",
                     "items": {"type": "number"},
                     "description": (
-                        "The numeric coded values that constitute the box score. "
-                        "E.g. [4, 5] for top 2 box on a 5-point scale, [1, 2] for bottom 2 box, [9, 10] for NPS promoters."
+                        "Numeric SPSS codes that make up the box score. "
+                        "Check the question's options dict in the registry first. "
+                        "E.g. [4,5] for top 2 box on a 5-point scale, [1,2] for bottom 2 box, [9,10] for NPS promoters."
                     ),
                 },
                 "box_label": {
                     "type": "string",
-                    "description": "Label for this box score, e.g. 'Top 2 Box', 'Bottom 2 Box', 'Top 3 Box'. Defaults to 'Top Box'.",
+                    "description": "Human-readable label for this score, e.g. 'Top 2 Box', 'Bottom 2 Box', 'NPS Promoters'.",
                 },
                 "filters": {"type": "object"},
                 "weighted": {"type": "boolean"},
@@ -101,8 +113,10 @@ TOOLS = [
     {
         "name": "get_mean",
         "description": (
-            "Get the mean (average) score for a numeric or rating question. "
-            "Use when the user asks for average score, mean rating, or average value."
+            "Get the weighted mean (average) score for a numeric or rating scale question. "
+            "Use when the user asks for average score, mean rating, or average value — "
+            "e.g. 'average satisfaction rating', 'mean score for Q7'. "
+            "When weights exist the mean is computed as a weighted average (np.average with weights)."
         ),
         "input_schema": {
             "type": "object",

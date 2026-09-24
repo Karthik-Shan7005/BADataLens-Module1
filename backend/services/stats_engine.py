@@ -3,6 +3,72 @@ import numpy as np
 from typing import Optional
 
 
+def search_questions(
+    registry: dict,
+    keywords: str,
+    max_results: int = 10,
+) -> dict:
+    """
+    Search the question registry by keyword — used by Claude to resolve natural language
+    queries to the correct question_code before calling any data tool.
+
+    Ranks by: number of distinct search terms matched (primary), then total match
+    frequency across label + option labels + keywords field (secondary).
+    Falls back to the full question list when nothing matches so Claude always
+    has something to inspect.
+    """
+    terms = [t.strip().lower() for t in keywords.replace(",", " ").split() if len(t.strip()) >= 2]
+    if not terms:
+        return {"error": "Provide at least one keyword (2+ characters)."}
+
+    scored = []
+    for qid, q in registry.items():
+        parts = [q["label"].lower()]
+        for v in q["option_labels"].values():
+            parts.append(v.lower())
+        if q.get("keywords"):
+            parts.append(q["keywords"].lower())
+        text = " ".join(parts)
+
+        matched_terms, freq = [], 0
+        for term in terms:
+            if term in text:
+                matched_terms.append(term)
+                freq += text.count(term)
+
+        if matched_terms:
+            scored.append((len(matched_terms), freq, qid, q))
+
+    scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
+    results = [
+        {
+            "question_code": qid,
+            "label": q["label"],
+            "type": q["type"],
+            "options": dict(list(q["option_labels"].items())[:6]),
+            "num_options": len(q["option_labels"]),
+        }
+        for _, _, qid, q in scored[:max_results]
+    ]
+
+    if not results:
+        return {
+            "keywords": keywords,
+            "message": f"No questions matched '{keywords}'. Full question list below — pick the best match.",
+            "all_questions": [
+                {"question_code": k, "label": v["label"], "type": v["type"]}
+                for k, v in registry.items()
+            ],
+        }
+
+    return {
+        "keywords": keywords,
+        "total_matches": len(scored),
+        "results": results,
+    }
+
+
 def apply_filters(df: pd.DataFrame, filters: dict, registry: dict) -> pd.DataFrame:
     """
     Apply filters to the DataFrame.
